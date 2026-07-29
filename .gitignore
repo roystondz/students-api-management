@@ -30,6 +30,9 @@ go.work.sum
 # Storage
 /storage
 
+# Config
+
+
 # Editor/IDE
 # .idea/
 # .vscode/
