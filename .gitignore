@@ -31,7 +31,7 @@ go.work.sum
 /storage
 
 # Config
-
+/config
 
 # Editor/IDE
 # .idea/
