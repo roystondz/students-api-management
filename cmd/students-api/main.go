@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/roystondz/students-api/internal/config"
+	"github.com/roystondz/students-api/internal/http/handlers/auth"
 	"github.com/roystondz/students-api/internal/http/handlers/student"
 	"github.com/roystondz/students-api/internal/storage/sqlite"
 )
@@ -32,6 +33,9 @@ func main() {
 	router.HandleFunc("GET /api/students", student.GetAll(storage))
 	router.HandleFunc("DELETE /api/students/{id}", student.Delete(storage))
 	router.HandleFunc("PUT /api/students/{id}", student.Update(storage))
+
+	router.HandleFunc("POST /api/auth/signup", auth.SignUp(storage))
+	router.HandleFunc("POST /api/auth/signin", auth.SignIn(storage))
 
 	server := &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", cfg.HTTPServer.Address, cfg.HTTPServer.Port),

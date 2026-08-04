@@ -8,6 +8,7 @@ import (
 	"github.com/roystondz/students-api/internal/config"
 	"github.com/roystondz/students-api/internal/storage"
 	"github.com/roystondz/students-api/internal/types"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Sqlite struct {
@@ -28,6 +29,16 @@ func New(cfg *config.Config) (*Sqlite, error) {
 		age INTEGER NOT NULL
 	)
 	`)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = db.Exec(`
+	CREATE TABLE IF NOT EXISTS users (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		username TEXT NOT NULL UNIQUE,
+		password TEXT NOT NULL
+	)`)
 	if err != nil {
 		return nil, err
 	}
@@ -138,4 +149,49 @@ func (s *Sqlite) UpdateStudent(id int64, name string, email string, age int) (ty
 	}
 
 	return types.Student{Id: id, Name: name, Email: email, Age: age}, nil
+}
+
+func (s *Sqlite) SignUp(username string, password string) (int64, error) {
+	stmt, err := s.db.Prepare(`INSERT INTO users (username, password) VALUES (?, ?)`)
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return 0, err
+	}
+	
+	result, err := stmt.Exec(username, hashedPassword)
+	if err != nil {
+		return 0, err
+	}
+	lastId, _ := result.LastInsertId()
+	return lastId, nil
+}
+
+func (s *Sqlite) SignIn(username string, password string) (int64, error) {
+	stmt, err := s.db.Prepare(`SELECT id, username, password FROM users WHERE username = ? LIMIT 1`)
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	var user types.User
+
+	err = stmt.QueryRow(username).Scan(&user.Id, &user.Username, &user.Password)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, storage.ErrStudentNotFound
+		}
+		return 0, err
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if err != nil {
+		return 0, storage.ErrStudentNotFound
+	}
+
+	return user.Id, nil
 }
