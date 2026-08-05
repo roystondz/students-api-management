@@ -15,6 +15,7 @@ import (
 	"github.com/roystondz/students-api/internal/http/handlers/auth"
 	"github.com/roystondz/students-api/internal/http/handlers/student"
 	"github.com/roystondz/students-api/internal/storage/sqlite"
+	"github.com/roystondz/students-api/internal/http/middleware"
 )
 
 func main() {
@@ -28,14 +29,21 @@ func main() {
 
 	router := http.NewServeMux()
 
-	router.HandleFunc("POST /api/students", student.Create(storage))
-	router.HandleFunc("GET /api/students/{id}", student.Get(storage))
-	router.HandleFunc("GET /api/students", student.GetAll(storage))
-	router.HandleFunc("DELETE /api/students/{id}", student.Delete(storage))
-	router.HandleFunc("PUT /api/students/{id}", student.Update(storage))
+	studentHandler := student.New(storage)
+	authHandler := auth.New(storage, cfg.JWTSecret)
+	authMiddleware := middleware.AuthMiddleware([]byte(cfg.JWTSecret))
 
-	router.HandleFunc("POST /api/auth/signup", auth.SignUp(storage))
-	router.HandleFunc("POST /api/auth/signin", auth.SignIn(storage))
+	// Student Endpoints
+	router.Handle("POST /api/students", authMiddleware(http.HandlerFunc(studentHandler.Create)))
+	router.Handle("GET /api/students/{id}", authMiddleware(http.HandlerFunc(studentHandler.Get)))
+	router.Handle("GET /api/students", authMiddleware(http.HandlerFunc(studentHandler.GetAll)))
+	router.Handle("DELETE /api/students/{id}", authMiddleware(http.HandlerFunc(studentHandler.Delete)))
+	router.Handle("PUT /api/students/{id}", authMiddleware(http.HandlerFunc(studentHandler.Update)))
+
+	// Auth Endpoints
+	router.Handle("POST /api/auth/signup", http.HandlerFunc(authHandler.SignUp))
+	router.Handle("POST /api/auth/signin", http.HandlerFunc(authHandler.SignIn))
+	router.Handle("POST /api/auth/logout", authMiddleware(http.HandlerFunc(authHandler.Logout)))
 
 	server := &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", cfg.HTTPServer.Address, cfg.HTTPServer.Port),

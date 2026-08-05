@@ -3,3 +3,4 @@ storage_path: "storage/storage.db"
 http_server:
   address: "localhost"
   port: 8082
+jwt_secret: "yoursecretkey"

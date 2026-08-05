@@ -17,9 +17,10 @@ type Config struct {
 	Env         string      `yaml:"env"`
 	StoragePath string      `yaml:"storage_path"`
 	HTTPServer  HTTP_Server `yaml:"http_server"`
+	JWTSecret   string      `yaml:"jwt_secret"`
 }
 
-func MustLoad() *Config{
+func MustLoad() *Config {
 	var configPath string
 	configPath = os.Getenv("CONFIG_PATH")
 	if configPath == "" {

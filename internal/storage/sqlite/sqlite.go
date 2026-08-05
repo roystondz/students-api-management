@@ -183,15 +183,19 @@ func (s *Sqlite) SignIn(username string, password string) (int64, error) {
 	err = stmt.QueryRow(username).Scan(&user.Id, &user.Username, &user.Password)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return 0, storage.ErrStudentNotFound
+			return 0, storage.ErrUserNotFound
 		}
 		return 0, err
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
-		return 0, storage.ErrStudentNotFound
+		return 0, storage.ErrUserUnauthorised
 	}
 
 	return user.Id, nil
+}
+
+func (s *Sqlite) Logout() (int64, error) {
+	return 0, nil
 }

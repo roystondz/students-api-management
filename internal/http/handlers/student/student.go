@@ -14,8 +14,17 @@ import (
 	"github.com/roystondz/students-api/internal/utils/response"
 )
 
-func Create(st storage.Storage) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+type StudentHandler struct {
+	storage storage.Storage
+}
+
+func New(st storage.Storage) *StudentHandler {
+	return &StudentHandler{
+		storage: st,
+	}
+}
+
+func (s *StudentHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 		var student types.Student
 		err := json.NewDecoder(r.Body).Decode(&student)
@@ -40,7 +49,7 @@ func Create(st storage.Storage) http.HandlerFunc {
 			return
 		}
 
-		lastId, err := st.CreateStudent(student.Name, student.Email, student.Age)
+		lastId, err := s.storage.CreateStudent(student.Name, student.Email, student.Age)
 		if err != nil {
 			slog.Error("Failed to create student: " + err.Error())
 			response.WriteJson(w, http.StatusInternalServerError, response.CommonError(errors.New("Failed to create student: "+err.Error())))
@@ -48,11 +57,9 @@ func Create(st storage.Storage) http.HandlerFunc {
 		}
 
 		response.WriteJson(w, http.StatusCreated, map[string]string{"message": "student created", "id": strconv.FormatInt(lastId, 10)})
-	}
 }
 
-func Get(st storage.Storage) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func (s *StudentHandler) Get(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 
 		slog.Info("Getting a student: ", slog.String("id", id))
@@ -64,7 +71,7 @@ func Get(st storage.Storage) http.HandlerFunc {
 			return
 		}
 
-		student, e := st.GetStudent(intId)
+		student, e := s.storage.GetStudent(intId)
 		if e != nil {
 			if errors.Is(e, storage.ErrStudentNotFound) {
 				response.WriteJson(w, http.StatusNotFound, response.CommonError(e))
@@ -78,11 +85,10 @@ func Get(st storage.Storage) http.HandlerFunc {
 		response.WriteJson(w, http.StatusOK, student)
 
 	}
-}
 
-func GetAll(st storage.Storage) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		students, err := st.GetAll()
+
+func (s *StudentHandler) GetAll(w http.ResponseWriter, r *http.Request) {
+		students, err := s.storage.GetAll()
 		if err != nil {
 			slog.Error("Failed to get students: " + err.Error())
 			response.WriteJson(w, http.StatusInternalServerError, response.CommonError(errors.New("Failed to get students: "+err.Error())))
@@ -90,10 +96,9 @@ func GetAll(st storage.Storage) http.HandlerFunc {
 		}
 		response.WriteJson(w, http.StatusOK, students)
 	}
-}
 
-func Delete(st storage.Storage) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+
+func (s *StudentHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 
 		slog.Info("Deleting a student: ", slog.String("id", id))
@@ -105,7 +110,7 @@ func Delete(st storage.Storage) http.HandlerFunc {
 			return
 		}
 
-		err = st.DeleteStudent(intId)
+		err = s.storage.DeleteStudent(intId)
 		if err != nil {
 			if errors.Is(err, storage.ErrStudentNotFound) {
 				response.WriteJson(w, http.StatusNotFound, response.CommonError(err))
@@ -118,10 +123,9 @@ func Delete(st storage.Storage) http.HandlerFunc {
 
 		response.WriteJson(w, http.StatusOK, map[string]string{"message": "student deleted"})
 	}
-}
 
-func Update(st storage.Storage) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+
+func (s *StudentHandler) Update(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 
 		slog.Info("Updating a student: ", slog.String("id", id))
@@ -141,7 +145,7 @@ func Update(st storage.Storage) http.HandlerFunc {
 			return
 		}
 
-		student, err = st.UpdateStudent(intId, student.Name, student.Email, student.Age)
+		student, err = s.storage.UpdateStudent(intId, student.Name, student.Email, student.Age)
 		if err != nil {
 			if errors.Is(err, storage.ErrStudentNotFound) {
 				response.WriteJson(w, http.StatusNotFound, response.CommonError(err))
@@ -154,4 +158,3 @@ func Update(st storage.Storage) http.HandlerFunc {
 
 		response.WriteJson(w, http.StatusOK, student)
 	}
-}
